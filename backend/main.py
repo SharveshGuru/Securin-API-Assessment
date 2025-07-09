@@ -126,7 +126,7 @@ def search_recipies(db:Session=Depends(get_db),
                     title:str | None=None
                     ):
     
-    data=db.query(Recipies)
+    data=db.query(Recipies).order_by(text("rating desc"))
     
     if maxCalories:
         data=data.filter(Recipies.calories!=None).filter(Recipies.calories<=maxCalories)
