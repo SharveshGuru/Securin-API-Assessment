@@ -14,6 +14,7 @@ class Recipies(Base):
     description=Column(Text)
     nutrients=Column(JSON)
     serves=Column(String(50))
+    calories=Column(Integer)
     
     
     

@@ -11,7 +11,8 @@ def add_recipie(db: Session,
                 total_time:int,
                 description: str,
                 nutrients: json,
-                serves:str):
+                serves:str,
+                calories:int):
     recipie=Recipies(
         cuisine=cuisine,
         title=title,
@@ -21,7 +22,8 @@ def add_recipie(db: Session,
         total_time=total_time,
         description=description,
         nutrients=nutrients,
-        serves=serves
+        serves=serves,
+        calories=calories
     )
     db.add(recipie)
     db.commit()

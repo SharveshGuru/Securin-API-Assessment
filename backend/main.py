@@ -9,7 +9,7 @@ import json
 from crud import add_recipie
 from fastapi.middleware.cors import CORSMiddleware
 import math
-
+from pydantic import SkipValidation
 app=FastAPI()
 
 app.add_middleware(
@@ -38,15 +38,21 @@ class RecipieSchema(BaseModel):
     cook_time:int
     total_time:int
     description: str
-    nutrients: dict
+    nutrients: SkipValidation[dict]
     serves:str
+    calories:int
     
     class Config:
         orm_mode=True
 
 class RecipiePaginated(BaseModel):
     total:int
+    page:int
+    limit:int
     data:List[RecipieSchema]
+
+class RecipieList(BaseModel):
+    total:List[RecipieSchema]
     
 @app.get("/store_recipies")
 def store_recipies(db:Session=Depends(get_db)):
@@ -63,7 +69,14 @@ def store_recipies(db:Session=Depends(get_db)):
             description=recipie["description"]
             serves=recipie["serves"]
             nutrients=recipie["nutrients"]
-            
+            calories=-1
+            try:
+                calories_string=nutrients["calories"]
+                value,unit=map(str,calories_string.split(" "))
+                calories=int(value)
+            except:
+                calories_string=""
+                
             if rating is None:
                 rating=-1.0
             
@@ -75,8 +88,17 @@ def store_recipies(db:Session=Depends(get_db)):
                 
             if total_time is None:
                 total_time=-1
+                
+            if serves is None:
+                serves=""
             
-            add_recipie(db,cuisine,title,rating,prep_time,cook_time,total_time,description,nutrients,serves)
+            if title is None:
+                title=""
+            
+            if description is None:
+                description=""
+            
+            add_recipie(db,cuisine,title,rating,prep_time,cook_time,total_time,description,nutrients,serves,calories)
     
     return {"message":"Added recipies successfully!"}
 
@@ -87,5 +109,56 @@ def get_recipies(db:Session=Depends(get_db),
     total=db.query(Recipies).count()
     total=math.ceil(total/limit)
     data= db.query(Recipies).order_by(text("rating desc")).offset((page-1)*limit).limit(limit).all()
-    return {"total":total,"data":data}
+    return {"total":total,"page":page,"limit":limit,"data":data}
 
+@app.get("/api/recipies/search",response_model=RecipieList)
+def search_recipies(db:Session=Depends(get_db),
+                    maxCalories:int | None=None,
+                    minCalories:int | None=None,
+                    calories:int | None=None,
+                    maxTotalTime: int | None=None,
+                    minTotalTime: int | None=None,
+                    totalTime: int | None=None,
+                    maxRating:float | None=None,
+                    minRating:float | None=None,
+                    rating:float | None=None,
+                    cuisine:str | None=None,
+                    title:str | None=None
+                    ):
+    
+    data=db.query(Recipies)
+    
+    if maxCalories:
+        data=data.filter(Recipies.calories!=None).filter(Recipies.calories<=maxCalories)
+    
+    if minCalories:
+        data=data.filter(Recipies.calories>=minCalories)
+        
+    if calories:
+        data=data.filter(Recipies.calories==calories)
+    
+    if maxTotalTime:
+        data=data.filter(Recipies.total_time<=totalTime)
+    
+    if minTotalTime:
+        data=data.filter(Recipies.total_time>=minTotalTime)
+        
+    if totalTime:
+        data=data.filter(Recipies.total_time==totalTime)
+        
+    if maxRating:
+        data=data.filter(Recipies.rating<=maxRating)
+    
+    if minRating:
+        data=data.filter(Recipies.rating>=minRating)
+        
+    if rating:
+        data=data.filter(Recipies.rating==rating)
+        
+    if cuisine:
+        data=data.filter(Recipies.cuisine==cuisine)
+        
+    if title:
+        data=data.filter(Recipies.title.ilike(f"%{title}%"))
+        
+    return {"total": data.all()}
