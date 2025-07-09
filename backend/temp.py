@@ -1,13 +1,9 @@
 import json
 
-with open(r'C:\stuff\Securin-API-Assessment\backend\US_recipes_null.json') as file:
+with open(r'C:\stuff\Securin-API-Assessment\backend\recipies.json') as file:
     file_data = json.load(file)
-    lst=file_data['0']
+    lst=file_data['data']
     c=0
-    for i in file_data:
-        dic=file_data[i]
-        print("id " +i)
-        print(dic["rating"])
+    for i in lst:
         c+=1
-        if c==10000:
-            break
+print(c)
